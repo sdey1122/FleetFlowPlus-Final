@@ -23,8 +23,8 @@ export default function App() {
           richColors
           closeButton
           duration={4000}
-          offset={90}
-          mobileOffset={75}
+          offset={{ top: 85, right: 20 }}
+          mobileOffset={{ top: 72, right: 12, left: 12 }}
           visibleToasts={3}
         />
       </ThemeProvider>
