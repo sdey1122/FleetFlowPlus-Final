@@ -262,21 +262,18 @@ const options = {
         url: "/",
         description: "Current Server",
       },
-
       {
         url: "http://localhost:6050",
         description: "Local Development Server",
       },
-
-      ...(process.env.BACKEND_URL &&
-      process.env.BACKEND_URL !== "http://localhost:6050"
-        ? [
-            {
-              url: process.env.BACKEND_URL,
-              description: "Configured Backend Server",
-            },
-          ]
-        : []),
+      {
+        url: "https://fleet-flow-plus-final.vercel.app",
+        description: "Vercel Backend Server",
+      },
+      {
+        url: "https://your-service.onrender.com",
+        description: "Render Backend Server",
+      },
     ],
 
     tags: [
