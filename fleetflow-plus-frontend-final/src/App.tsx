@@ -18,7 +18,15 @@ export default function App() {
         <ErrorBoundary>
           <RouterProvider router={router} />
         </ErrorBoundary>
-        <Toaster position="bottom-right" richColors closeButton />
+        <Toaster
+          position="top-right"
+          richColors
+          closeButton
+          duration={4000}
+          offset={90}
+          mobileOffset={75}
+          visibleToasts={3}
+        />
       </ThemeProvider>
     </Provider>
   );
