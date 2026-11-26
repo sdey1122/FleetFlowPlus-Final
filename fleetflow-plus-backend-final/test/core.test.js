@@ -1,0 +1,11 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const {generateOTP,otpDigest,digest}=require('../src/utils/otpGenerator');
+const {ttl,getEnv}=require('../src/config/env');
+const {baseTemplate,escapeHTML}=require('../src/templates/email/base.template');
+process.env.OTP_SECRET='test-only-not-for-real-use'.repeat(3);
+test('OTP has exactly 6 decimal digits, including possible leading zeros',()=>{for(let i=0;i<1000;i++)assert.match(generateOTP(),/^\d{6}$/);});
+test('OTP HMAC is stable and separated by purpose and account',()=>{const v=otpDigest('verify','a@example.com','000123');assert.equal(v,otpDigest('verify','a@example.com','000123'));assert.notEqual(v,otpDigest('reset','a@example.com','000123'));assert.notEqual(v,otpDigest('verify','b@example.com','000123'));assert.notEqual(v,otpDigest('verify','a@example.com','000124'));assert.match(v,/^[a-f0-9]{64}$/);});
+test('Token hash and TTL parsing',()=>{assert.match(digest('refresh'),/^[a-f0-9]{64}$/);assert.equal(ttl('15m'),900);assert.equal(ttl('7d'),604800);assert.throws(()=>ttl('900'));assert.throws(()=>ttl('0s'));assert.throws(()=>ttl('999999d'));});
+test('HTML templates escape user content',()=>{assert.equal(escapeHTML('<x>&"\''),'&lt;x&gt;&amp;&quot;&#39;');const html=baseTemplate({label:'VERIFY',title:'Check inbox',name:'<script>alert(1)</script>',body:'Body',otp:'000001',actionUrl:'https://example.com/#verify=a&b',actionText:'Open'});assert.ok(html.includes('000001'));assert.ok(html.includes('&lt;script&gt;'));assert.ok(!html.includes('<script>'));assert.ok(html.includes('a&amp;b'));});
+test('Default OTP settings are 60 seconds',()=>{assert.equal(getEnv().otpTTL,60);assert.equal(getEnv().cooldown,60);assert.equal(getEnv().attempts,5);});

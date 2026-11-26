@@ -1,0 +1,12 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const {register,verifyEmail,resetPassword}=require('../src/validation/auth.validation');
+const {signToken,verifyToken}=require('../src/utils/generateToken');
+process.env.JWT_ACCESS_SECRET='test-access-'.repeat(6);
+process.env.JWT_REFRESH_SECRET='test-refresh-'.repeat(6);
+process.env.JWT_REVERIFY_SECRET='test-reverify-'.repeat(6);
+const valid={name:'Test Customer',email:'Test@Example.com',phone:'+919876543210',role:'customer',password:'FleetFlow@123',confirmPassword:'FleetFlow@123'};
+test('Register normalizes email and accepts all three public roles',()=>{for(const role of ['customer','driver','dispatcher']){const {error,value}=register.validate({...valid,role});assert.equal(error,undefined);assert.equal(value.email,'test@example.com');}});
+test('Reject admin, invalid phone, short name, invalid email, weak password and mismatch',()=>{for(const fields of [{role:'admin'},{phone:'+910123456789'},{name:'ab'},{email:'not-email'},{password:'weak',confirmPassword:'weak'},{password:'lowercase@123',confirmPassword:'lowercase@123'},{password:'UPPERCASE@123',confirmPassword:'UPPERCASE@123'},{password:'NoSymbol123',confirmPassword:'NoSymbol123'},{confirmPassword:'different'},{isEmailVerified:true}])assert.ok(register.validate({...valid,...fields}).error,JSON.stringify(fields));});
+test('OTP must be a 6-character string',()=>{assert.equal(verifyEmail.validate({email:valid.email,otp:'000001'}).error,undefined);assert.ok(verifyEmail.validate({email:valid.email,otp:'12345'}).error);assert.ok(resetPassword.validate({email:valid.email,otp:'123456',password:valid.password,confirmPassword:'wrong'}).error);});
+test('JWT purpose and signature validation',()=>{const token=signToken('access','test-user',{sid:'test-session',sv:0});assert.equal(verifyToken('access',token).sub,'test-user');assert.throws(()=>verifyToken('refresh',token));assert.throws(()=>verifyToken('access',token+'x'));assert.notEqual(token,signToken('access','test-user',{sid:'test-session',sv:0}));});
