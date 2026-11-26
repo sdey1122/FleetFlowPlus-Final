@@ -75,7 +75,7 @@ export default function JourneyPlanner() {
             variant="overline"
             sx={{ letterSpacing: 2, color: c.deep, fontWeight: 700 }}
           >
-            01 / JOURNEY PLANNER
+            JOURNEY PLANNER
           </Typography>
           <Typography
             variant="h5"

@@ -225,7 +225,6 @@ export default function Navbar() {
             <Button
               onClick={() => modal.open("register")}
               variant="contained"
-              endIcon={<ArrowUpRight size={15} />}
               sx={{
                 display: { xs: "none", sm: "inline-flex" },
                 whiteSpace: "nowrap",

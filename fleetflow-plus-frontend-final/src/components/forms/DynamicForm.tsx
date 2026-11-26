@@ -152,8 +152,8 @@ export default function DynamicForm({
       ))}
       {fields.some((f) => f.name === "confirmPassword") && (
         <Typography variant="caption" color="text.secondary">
-          9–32 characters · uppercase, lowercase and a special character · max
-          72 UTF-8 bytes
+          9–32 characters and must have one uppercase, one lowercase and one
+          special character
         </Typography>
       )}
       {extra}

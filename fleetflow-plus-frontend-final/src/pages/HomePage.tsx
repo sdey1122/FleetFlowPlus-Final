@@ -123,12 +123,7 @@ export default function HomePage() {
               every delivery. A simpler way to get from here to wherever comes
               next.
             </Typography>
-            <Button
-              onClick={start}
-              variant="contained"
-              endIcon={<ArrowUpRight size={18} />}
-              sx={{ mr: 2, mb: 3 }}
-            >
+            <Button onClick={start} variant="contained" sx={{ mr: 2, mb: 3 }}>
               {" "}
               {user ? "Open my workspace" : "Get started"}{" "}
             </Button>
@@ -207,7 +202,7 @@ export default function HomePage() {
               variant="overline"
               sx={{ letterSpacing: 2, color: c.deep }}
             >
-              02 / OUR ECOSYSTEM
+              OUR ECOSYSTEM
             </Typography>
             <Typography
               variant="h2"
@@ -291,7 +286,7 @@ export default function HomePage() {
               variant="overline"
               sx={{ letterSpacing: 2, fontWeight: 700 }}
             >
-              03 / ABOUT FLEETFLOW PLUS
+              ABOUT FLEETFLOW PLUS
             </Typography>
             <Typography
               variant="h2"
