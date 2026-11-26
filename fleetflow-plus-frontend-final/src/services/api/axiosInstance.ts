@@ -1,4 +1,5 @@
 import axios from "axios";
+import type { ISessionRequestConfig } from "../../types/interface/ISessionRequestConfig";
 import type { ISession } from "../../types/interface/ISession";
 import type { IApiResponse } from "../../types/interface/IApiResponse";
 export const http = axios.create({
@@ -63,31 +64,55 @@ export const restoreSession = () => {
   }
   return pending;
 };
-http.interceptors.request.use((config) => {
-  const token = getToken();
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+// A request must never be retried using a different account's credentials.
+http.interceptors.request.use(
+  (config) => {
+    const cfg: ISessionRequestConfig = config;
+    if (
+      cfg._fleetflowGeneration !== undefined &&
+      cfg._fleetflowGeneration !== generation
+    ) {
+      throw new axios.CanceledError("Account changed");
+    }
+    cfg._fleetflowGeneration = generation;
+    const token = getToken();
+    if (token) cfg.headers.Authorization = `Bearer ${token}`;
+    else cfg.headers.delete("Authorization");
+    return cfg;
+  },
+  (error) => {
+    throw error;
+  },
+  { synchronous: true },
+);
 http.interceptors.response.use(
   (r) => r,
   async (error) => {
-    const cfg = error.config;
+    const cfg = error.config as ISessionRequestConfig | undefined;
     if (
       !cfg ||
       cfg._retried ||
+      cfg.signal?.aborted ||
+      cfg._fleetflowGeneration !== generation ||
       error.response?.status !== 401 ||
       !getToken() ||
       !/^(?:\/?notifications(?:\/|$)|\/?auth\/me$)/.test(cfg.url || "")
     )
       throw error;
     cfg._retried = true;
-    const old = cfg.headers?.Authorization;
+    const old = cfg.headers.Authorization;
     const token = getToken();
     if (token && old !== `Bearer ${token}`) {
       cfg.headers.Authorization = `Bearer ${token}`;
       return http(cfg);
     }
     const session = await restoreSession();
+    if (
+      cfg._fleetflowGeneration !== generation ||
+      cfg.signal?.aborted ||
+      !getToken()
+    )
+      throw error;
     cfg.headers.Authorization = `Bearer ${session.accessToken}`;
     return http(cfg);
   },

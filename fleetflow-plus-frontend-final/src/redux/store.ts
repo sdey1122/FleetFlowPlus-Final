@@ -6,7 +6,6 @@ import {
 import { setupListeners } from "@reduxjs/toolkit/query";
 import auth, { sessionReceived, sessionCleared } from "./slices/authSlice";
 import modal, { setPending } from "./slices/modalSlice";
-import notifications, { clearGuest } from "./slices/notificationSlice";
 import { notificationApi } from "../services/api/notificationApi";
 import { configureSession } from "../services/api/axiosInstance";
 import { savePending } from "../services/helper/pending";
@@ -15,7 +14,6 @@ export const store = configureStore({
   reducer: {
     auth,
     modal,
-    notifications,
     [notificationApi.reducerPath]: notificationApi.reducer,
   },
   middleware: (g) =>
@@ -32,7 +30,6 @@ listener.startListening({
     const after = api.getState() as ReturnType<typeof store.getState>;
     if (before.auth.user?.id !== after.auth.user?.id) {
       api.dispatch(notificationApi.util.resetApiState());
-      api.dispatch(clearGuest());
     }
   },
 });

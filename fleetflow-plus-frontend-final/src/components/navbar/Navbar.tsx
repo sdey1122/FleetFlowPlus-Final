@@ -133,7 +133,7 @@ export default function Navbar() {
           ))}
         </Box>
         <Box sx={{ flex: { xs: 1, md: 0 } }} />
-        <NotificationBell />
+        {user && <NotificationBell key={user.id} />}
         {status === "loading" ? (
           <CircularProgress size={20} />
         ) : user ? (

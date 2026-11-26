@@ -8,6 +8,7 @@ import {
   Divider,
   Tooltip,
   Alert,
+  CircularProgress,
 } from "@mui/material";
 import {
   Bell,
@@ -17,39 +18,52 @@ import {
   Inbox,
   Mail,
 } from "lucide-react";
+import { skipToken } from "@reduxjs/toolkit/query";
 import { useAppSelector } from "../../hooks/useAppSelector";
-import { useAppDispatch } from "../../hooks/useAppDispatch";
 import {
   useNotificationsQuery,
   useReadAllMutation,
   useReadOneMutation,
 } from "../../services/api/notificationApi";
-import { readGuest } from "../../redux/slices/notificationSlice";
 import { toast } from "sonner";
+import type { IApiError } from "../../types/interface/IApiError";
 import { colors as c } from "../../theme/palette";
+
 export default function NotificationBell() {
   const user = useAppSelector((s) => s.auth.user);
-  const guest = useAppSelector((s) => s.notifications.guest);
-  const dispatch = useAppDispatch();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
-  const q = useNotificationsQuery(user?.id || "", {
-    skip: !user,
-    pollingInterval: 45000,
+  const q = useNotificationsQuery(user?.id ?? skipToken, {
+    pollingInterval: 60000,
+    skipPollingIfUnfocused: true,
     refetchOnFocus: true,
     refetchOnReconnect: true,
+    refetchOnMountOrArgChange: true,
   });
-  const [all, { isLoading }] = useReadAllMutation();
-  const [one] = useReadOneMutation();
-  const items = user ? q.currentData?.items || [] : guest;
-  const unread = user
-    ? q.currentData?.unreadCount || 0
-    : guest.filter((n) => !n.readAt).length;
+  const [all, { isLoading: markingAll }] = useReadAllMutation();
+  const [one, { isLoading: markingOne }] = useReadOneMutation();
+  if (!user) return null;
+
+  // currentData is scoped to this account, even when the query argument changes.
+  const data = q.currentData;
+  const items = data?.items ?? [];
+  const unread = data?.unreadCount ?? 0;
+  const error = q.error && "message" in q.error ? q.error : undefined;
+  const message = (e: unknown) =>
+    typeof (e as IApiError | null)?.message === "string"
+      ? (e as IApiError).message
+      : "Could not mark notifications read.";
   const markAll = async () => {
     try {
-      if (user) await all().unwrap();
-      else dispatch(readGuest());
-    } catch {
-      toast.error("Unable to mark notifications read.");
+      await all(user.id).unwrap();
+    } catch (e) {
+      toast.error(message(e));
+    }
+  };
+  const markOne = async (id: string) => {
+    try {
+      await one({ userId: user.id, id }).unwrap();
+    } catch (e) {
+      toast.error(message(e));
     }
   };
   return (
@@ -57,7 +71,10 @@ export default function NotificationBell() {
       <Tooltip title="Notifications">
         <IconButton
           aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}
-          onClick={(e) => setAnchor(e.currentTarget)}
+          onClick={(e) => {
+            setAnchor(e.currentTarget);
+            if (!q.isFetching && (q.isError || !data)) void q.refetch();
+          }}
           sx={{
             position: "relative",
             border: 0,
@@ -116,14 +133,20 @@ export default function NotificationBell() {
           <Box>
             <Typography fontWeight={800}>Notifications</Typography>
             <Typography variant="caption" color="text.secondary">
-              {unread ? `${unread} unread` : "You’re all caught up"}
+              {!data
+                ? q.isFetching
+                  ? "Loading updates…"
+                  : "Account updates"
+                : unread
+                  ? `${unread} unread`
+                  : "You’re all caught up"}
             </Typography>
           </Box>
           <Tooltip title="Mark all as read">
             <span>
               <IconButton
                 aria-label="Mark all as read"
-                disabled={!unread || isLoading}
+                disabled={!unread || markingAll || markingOne}
                 onClick={markAll}
               >
                 <CheckCheck size={21} />
@@ -133,23 +156,39 @@ export default function NotificationBell() {
         </Box>
         <Divider />
         <Box sx={{ maxHeight: 390, overflowY: "auto" }}>
-          {user && q.isError && (
+          {q.isError && (
             <Alert
               severity="warning"
-              action={<Button onClick={() => q.refetch()}>Retry</Button>}
+              action={
+                <Button
+                  disabled={q.isFetching}
+                  onClick={() => void q.refetch()}
+                >
+                  Retry
+                </Button>
+              }
             >
-              Notifications unavailable.
+              {data
+                ? "Could not refresh. Showing your last loaded updates."
+                : "Could not load notifications."}
+              <Typography variant="caption" component="div">
+                {error?.message || "Please try again."}
+                {error && "code" in error && error.code
+                  ? ` (${error.code})`
+                  : ""}
+              </Typography>
             </Alert>
           )}
-          {!items.length && !q.isError && (
+          {!data && q.isFetching && (
+            <Box sx={{ p: 4, textAlign: "center" }}>
+              <CircularProgress size={24} />
+            </Box>
+          )}
+          {data && !items.length && (
             <Box sx={{ p: 4, textAlign: "center", color: c.muted }}>
               <Inbox size={30} />
               <Typography variant="body2" sx={{ mt: 1 }}>
-                {user
-                  ? q.isLoading
-                    ? "Loading…"
-                    : "No notifications yet."
-                  : "Updates about your account will appear here."}
+                No notifications yet.
               </Typography>
             </Box>
           )}
@@ -163,15 +202,11 @@ export default function NotificationBell() {
             return (
               <Box
                 component="button"
+                type="button"
                 key={n.id}
-                onClick={async () => {
-                  if (n.readAt) return;
-                  try {
-                    if (user) await one(n.id).unwrap();
-                    else dispatch(readGuest());
-                  } catch {
-                    toast.error("Unable to mark notification read.");
-                  }
+                disabled={markingAll || markingOne}
+                onClick={() => {
+                  if (!n.readAt) void markOne(n.id);
                 }}
                 sx={{
                   width: "100%",
