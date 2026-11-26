@@ -1,0 +1,25 @@
+{
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/auth/:path*",
+      "destination": "https://fleetflowplus-final.onrender.com/auth/:path*"
+    },
+    {
+      "source": "/notifications",
+      "destination": "https://fleetflowplus-final.onrender.com/notifications"
+    },
+    {
+      "source": "/notifications/:path*",
+      "destination": "https://fleetflowplus-final.onrender.com/notifications/:path*"
+    },
+    {
+      "source": "/contact",
+      "destination": "https://fleetflowplus-final.onrender.com/contact"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
