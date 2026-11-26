@@ -13,13 +13,35 @@ const swagger = require("./config/swagger");
 const app = express();
 const env = getEnv();
 
+// Disable Express identification
 app.disable("x-powered-by");
 
+// Trust reverse proxy
 app.set("trust proxy", Number(process.env.TRUST_PROXY || 0));
 
+// Normalize configured backend origins
+const backendOrigins = [
+  env.backend,
+  process.env.RENDER_BACKEND_URL,
+  process.env.VERCEL_BACKEND_URL,
+  process.env.EMAIL_SERVICE_URL,
+
+  ...(!env.production
+    ? ["http://localhost:6050"]
+    : []),
+]
+  .filter((value) => value?.trim())
+  .map((value) => new URL(value.trim()).origin);
+
+// Allowed CORS origins
 const allowed = new Set([
+  // Frontend origin
   env.frontend,
 
+  // Localhost, Render and Vercel backend origins
+  ...backendOrigins,
+
+  // Local frontend development origins
   ...(!env.production
     ? [
         "http://localhost:3000",
@@ -48,41 +70,93 @@ app.use(
           (req, res) => `'nonce-${res.locals.nonce}'`,
         ],
 
-        styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
+        styleSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://unpkg.com",
+        ],
 
-        imgSrc: ["'self'", "data:", "https://unpkg.com"],
+        imgSrc: [
+          "'self'",
+          "data:",
+          "https://unpkg.com",
+        ],
 
-        upgradeInsecureRequests: env.production ? [] : null,
+        // Allow Swagger to connect to trusted backends
+        connectSrc: [
+          "'self'",
+          ...new Set(backendOrigins),
+        ],
+
+        upgradeInsecureRequests: env.production
+          ? []
+          : null,
       },
     },
   }),
 );
 
 // Interactive email OTP resend route
-app.use("/auth/email-resend", require("./routes/email.routes"));
+app.use(
+  "/auth/email-resend",
+  require("./routes/email.routes"),
+);
 
-// Private server-to-server mail relay (not a browser API).
-app.use("/internal/email/send-otp", require("./routes/mailRelay.routes"));
+// Private Render-to-Vercel mail relay
+// Must remain before CORS and body parsers
+app.use(
+  "/internal/email/send-otp",
+  require("./routes/mailRelay.routes"),
+);
 
 // Global CORS middleware
 app.use(
   cors({
-    origin: (origin, callback) =>
-      !origin || allowed.has(origin) || origin === process.env.BACKEND_URL
-        ? callback(null, true)
-        : callback(apiError(403, "CORS_DENIED", "Origin not allowed.")),
+    origin: (origin, callback) => {
+      // Allow server-to-server requests, Swagger,
+      // Postman and explicitly trusted browser origins
+      if (!origin || allowed.has(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(
+        apiError(
+          403,
+          "CORS_DENIED",
+          "Origin not allowed.",
+        ),
+      );
+    },
 
     credentials: true,
 
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    methods: [
+      "GET",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE",
+      "OPTIONS",
+    ],
 
-    allowedHeaders: ["Content-Type", "Authorization", "X-FleetFlow-Client"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-FleetFlow-Client",
+    ],
+
+    optionsSuccessStatus: 204,
   }),
 );
 
-// Body parsers
-app.use(express.json({ limit: "1mb" }));
+// JSON body parser
+app.use(
+  express.json({
+    limit: "1mb",
+  }),
+);
 
+// URL-encoded body parser
 app.use(
   express.urlencoded({
     extended: false,
@@ -90,6 +164,7 @@ app.use(
   }),
 );
 
+// Cookie parser
 app.use(cookieParser());
 
 // Server status
@@ -117,20 +192,24 @@ app.get("/", (req, res) =>
 );
 
 // Swagger JSON
-app.get("/api-docs.json", (req, res) => res.json(swagger));
+app.get("/api-docs.json", (req, res) =>
+  res.json(swagger),
+);
 
 // Swagger UI
 app.get("/api-docs", (req, res) =>
   res.send(`
     <!doctype html>
+
     <html lang="en">
 
       <head>
+
         <meta charset="UTF-8">
 
         <meta
           name="viewport"
-          content="width=device-width,initial-scale=1"
+          content="width=device-width, initial-scale=1"
         >
 
         <title>FleetFlow Plus API</title>
@@ -139,6 +218,7 @@ app.get("/api-docs", (req, res) =>
           rel="stylesheet"
           href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css"
         >
+
       </head>
 
       <body>
@@ -191,7 +271,13 @@ app.use(require("./routes/index"));
 
 // Route not found
 app.use((req, res, next) =>
-  next(apiError(404, "NOT_FOUND", "Requested route not found.")),
+  next(
+    apiError(
+      404,
+      "NOT_FOUND",
+      "Requested route not found.",
+    ),
+  ),
 );
 
 // Global error middleware

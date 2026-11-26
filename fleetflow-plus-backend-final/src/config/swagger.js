@@ -267,12 +267,12 @@ const options = {
         description: "Local Development Server",
       },
       {
-        url: "https://fleet-flow-plus-final.vercel.app",
-        description: "Vercel Backend Server",
+        url: "https://fleetflowplus-final.onrender.com",
+        description: "Render — Main Backend",
       },
       {
-        url: "https://your-service.onrender.com",
-        description: "Render Backend Server",
+        url: "https://fleet-flow-plus-final.vercel.app",
+        description: "Vercel — Email Delivery Backend",
       },
     ],
 
