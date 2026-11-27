@@ -18,11 +18,13 @@ export default function PhoneInput({
   onChange,
   error,
   helperText,
+  label = "Phone number",
 }: {
   value: string;
   onChange: (v: string) => void;
   error: boolean;
   helperText?: string;
+  label?: string;
 }) {
   const parsed = parsePhoneNumberFromString(value || "");
   const [country, setCountry] = useState<CountryCode>(parsed?.country || "IN");
@@ -59,7 +61,7 @@ export default function PhoneInput({
         renderInput={(params) => <TextField {...params} label="Country code" />}
       />
       <TextField
-        label="Phone number"
+        label={label}
         value={national}
         onChange={(e) => {
           const n = e.target.value.replace(/[^0-9 ()-]/g, "");

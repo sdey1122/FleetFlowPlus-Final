@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -10,12 +10,17 @@ import {
 import type { IPlace } from "../../types/interface/IPlace";
 import type { IRoute } from "../../types/interface/IRoute";
 import "leaflet/dist/leaflet.css";
-import { Box } from "@mui/material";
+import { Alert, Box } from "@mui/material";
 function Fit({ points }: { points: [number, number][] }) {
   const map = useMap();
   useEffect(() => {
-    if (points.length)
-      map.fitBounds(points, { padding: [28, 28], maxZoom: 14 });
+    map.invalidateSize();
+    if (points.length === 1) map.setView(points[0], 13);
+    else if (points.length > 1) map.fitBounds(points, { padding: [28, 28], maxZoom: 14 });
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => map.invalidateSize());
+    observer.observe(map.getContainer());
+    return () => observer.disconnect();
   }, [map, points]);
   return null;
 }
@@ -28,10 +33,12 @@ export default function RouteMap({
   b: IPlace | null;
   route: IRoute | null;
 }) {
-  const points: [number, number][] =
-    route?.coordinates ||
-    [a, b].filter((p): p is IPlace => !!p).map((p) => [p.lat, p.lon]);
+  const [tileError, setTileError] = useState(false);
+  const tileEvents = useMemo(() => ({ tileerror: () => setTileError(true), tileload: () => setTileError(false) }), []);
+  const points = useMemo<[number, number][]>(() => route?.coordinates || [a, b].filter((p): p is IPlace => !!p).map((p) => [p.lat, p.lon]), [a, b, route]);
   return (
+    <>
+    {tileError && <Alert severity="warning" sx={{ mb: 1 }}>Map tiles are unavailable. Check your internet connection. Selected coordinates and road routing are independent of the map tiles.</Alert>}
     <Box
       sx={{
         height: { xs: 260, md: 330 },
@@ -40,10 +47,11 @@ export default function RouteMap({
         "& .leaflet-container": { height: "100%", width: "100%" },
       }}
     >
-      <MapContainer center={[23.2, 88.1]} zoom={5} scrollWheelZoom={false}>
+      <MapContainer center={[22.5, 79.0]} zoom={5} scrollWheelZoom={false}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+          eventHandlers={tileEvents}
         />
         {route && (
           <Polyline
@@ -71,5 +79,6 @@ export default function RouteMap({
         <Fit points={points} />
       </MapContainer>
     </Box>
+    </>
   );
 }

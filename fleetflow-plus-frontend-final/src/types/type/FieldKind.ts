@@ -5,4 +5,5 @@ export type FieldKind =
   | "select"
   | "phone"
   | "otp"
-  | "textarea";
+  | "textarea"
+  | "number";

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Box, Button, Typography } from "@mui/material";
 import Navbar from "../components/navbar/Navbar";
@@ -6,16 +6,10 @@ import Footer from "../components/footer/Footer";
 import Loading from "../components/common/Loading";
 import { useAuthModal } from "../hooks/useAuthModal";
 import { useAppSelector } from "../hooks/useAppSelector";
-import { useSessionBootstrap } from "../hooks/useSessionBootstrap";
-import { useSocket } from "../hooks/useSocket";
-const AuthModal = lazy(() => import("../components/auth/AuthModal"));
 export default function MainLayout() {
-  useSessionBootstrap();
-  useSocket();
   const loc = useLocation(),
     navigate = useNavigate();
   const { open } = useAuthModal();
-  const active = useAppSelector((s) => s.modal.active);
   const pending = useAppSelector((s) => s.modal.pending);
   const user = useAppSelector((s) => s.auth.user);
   useEffect(() => {
@@ -74,27 +68,6 @@ export default function MainLayout() {
         </Suspense>
       </Box>
       <Footer />
-      {active && (
-        <Suspense
-          fallback={
-            <Box
-              role="status"
-              sx={{
-                position: "fixed",
-                inset: 0,
-                zIndex: 1400,
-                bgcolor: "#28282555",
-                display: "grid",
-                placeItems: "center",
-              }}
-            >
-              <Loading />
-            </Box>
-          }
-        >
-          <AuthModal />
-        </Suspense>
-      )}
     </Box>
   );
 }

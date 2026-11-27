@@ -12,6 +12,8 @@ import {
 } from "@mui/material";
 import {
   Bell,
+  Package,
+  CreditCard,
   CheckCheck,
   ShieldCheck,
   PartyPopper,
@@ -198,7 +200,7 @@ export default function NotificationBell() {
                 ? PartyPopper
                 : n.kind === "contact"
                   ? Mail
-                  : ShieldCheck;
+                  : n.kind === "order" ? Package : n.kind === "payment" ? CreditCard : ShieldCheck;
             return (
               <Box
                 component="button"

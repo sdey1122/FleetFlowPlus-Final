@@ -18,6 +18,10 @@
       "destination": "https://fleetflowplus-final.onrender.com/contact"
     },
     {
+      "source": "/shipments/:path*",
+      "destination": "https://fleetflowplus-final.onrender.com/shipments/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

@@ -1,46 +1,35 @@
 require("dotenv").config();
-
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const { randomBytes } = require("node:crypto");
-
 const { getEnv } = require("./config/env");
 const { apiError } = require("./utils/apiResponse");
 const swagger = require("./config/swagger");
-
 const app = express();
 const env = getEnv();
-
-// Disable Express identification
 app.disable("x-powered-by");
-
-// Trust reverse proxy
 app.set("trust proxy", Number(process.env.TRUST_PROXY || 0));
 
-// Normalize configured backend origins
 const backendOrigins = [
   env.backend,
   process.env.RENDER_BACKEND_URL,
   process.env.VERCEL_BACKEND_URL,
   process.env.EMAIL_SERVICE_URL,
-
-  ...(!env.production
-    ? ["http://localhost:6050"]
-    : []),
+  ...(!env.production ? ["http://localhost:6050"] : []),
 ]
   .filter((value) => value?.trim())
   .map((value) => new URL(value.trim()).origin);
-
 // Allowed CORS origins
 const allowed = new Set([
   // Frontend origin
   env.frontend,
-
+  ...(process.env.LOCAL_FRONTEND_ORIGIN === "http://localhost:5173"
+    ? ["http://localhost:5173"]
+    : []),
   // Localhost, Render and Vercel backend origins
   ...backendOrigins,
-
   // Local frontend development origins
   ...(!env.production
     ? [
@@ -52,10 +41,8 @@ const allowed = new Set([
     : []),
 ]);
 
-// Generate CSP nonce
 app.use((req, res, next) => {
   res.locals.nonce = randomBytes(16).toString("base64");
-
   next();
 });
 
@@ -69,94 +56,61 @@ app.use(
           "https://unpkg.com",
           (req, res) => `'nonce-${res.locals.nonce}'`,
         ],
-
-        styleSrc: [
-          "'self'",
-          "'unsafe-inline'",
-          "https://unpkg.com",
-        ],
-
-        imgSrc: [
-          "'self'",
-          "data:",
-          "https://unpkg.com",
-        ],
-
-        // Allow Swagger to connect to trusted backends
-        connectSrc: [
-          "'self'",
-          ...new Set(backendOrigins),
-        ],
-
-        upgradeInsecureRequests: env.production
-          ? []
-          : null,
+        styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
+        imgSrc: ["'self'", "data:", "https://unpkg.com"],
+        connectSrc: ["'self'", ...new Set(backendOrigins)],
+        upgradeInsecureRequests: env.production ? [] : null,
       },
     },
   }),
 );
 
-// Interactive email OTP resend route
-app.use(
-  "/auth/email-resend",
-  require("./routes/email.routes"),
-);
+app.use("/auth/email-resend", require("./routes/email.routes"));
 
-// Private Render-to-Vercel mail relay
-// Must remain before CORS and body parsers
-app.use(
-  "/internal/email/send-otp",
-  require("./routes/mailRelay.routes"),
+app.use("/internal/email/send-otp", require("./routes/mailRelay.routes"));
+
+app.post(
+  "/webhooks/razorpay",
+  express.raw({ type: "application/json", limit: "256kb" }),
+  async (req, res, next) => {
+    const { signature } = require("./services/payment.service");
+    if (
+      !Buffer.isBuffer(req.body) ||
+      !signature(
+        process.env.RAZORPAY_WEBHOOK_SECRET,
+        req.body,
+        req.get("X-Razorpay-Signature"),
+      )
+    )
+      throw apiError(401, "INVALID_WEBHOOK", "Invalid webhook signature.");
+    await require("./config/dbcon")();
+    next();
+  },
+  require("./controller/shipment.controller").webhook,
 );
 
 // Global CORS middleware
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow server-to-server requests, Swagger,
-      // Postman and explicitly trusted browser origins
       if (!origin || allowed.has(origin)) {
         return callback(null, true);
       }
-
-      return callback(
-        apiError(
-          403,
-          "CORS_DENIED",
-          "Origin not allowed.",
-        ),
-      );
+      return callback(apiError(403, "CORS_DENIED", "Origin not allowed."));
     },
-
     credentials: true,
-
-    methods: [
-      "GET",
-      "POST",
-      "PUT",
-      "PATCH",
-      "DELETE",
-      "OPTIONS",
-    ],
-
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "X-FleetFlow-Client",
-    ],
-
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-FleetFlow-Client"],
     optionsSuccessStatus: 204,
   }),
 );
 
-// JSON body parser
 app.use(
   express.json({
     limit: "1mb",
   }),
 );
 
-// URL-encoded body parser
 app.use(
   express.urlencoded({
     extended: false,
@@ -164,16 +118,13 @@ app.use(
   }),
 );
 
-// Cookie parser
 app.use(cookieParser());
 
-// Server status
 app.get("/", (req, res) =>
   res.json({
     success: true,
-
     message: "FleetFlow Plus Server Working!",
-
+    release: "part-2-location-notifications-fix-1",
     available_routes: [
       "/health",
       "/api-docs",
@@ -187,16 +138,18 @@ app.get("/", (req, res) =>
       "/auth/reset-password",
       "/auth/logout",
       "/auth/me",
+      "/notifications",
+      "/contact",
+      "/shipments/places",
+      "/shipments/quotes",
+      "/shipments/orders",
+      "/shipments/overview",
     ],
   }),
 );
 
-// Swagger JSON
-app.get("/api-docs.json", (req, res) =>
-  res.json(swagger),
-);
+app.get("/api-docs.json", (req, res) => res.json(swagger));
 
-// Swagger UI
 app.get("/api-docs", (req, res) =>
   res.send(`
     <!doctype html>
@@ -266,21 +219,11 @@ app.get("/api-docs", (req, res) =>
   `),
 );
 
-// Application routes
 app.use(require("./routes/index"));
 
-// Route not found
 app.use((req, res, next) =>
-  next(
-    apiError(
-      404,
-      "NOT_FOUND",
-      "Requested route not found.",
-    ),
-  ),
+  next(apiError(404, "NOT_FOUND", "Requested route not found.")),
 );
 
-// Global error middleware
 app.use(require("./middleware/error.middleware"));
-
 module.exports = app;

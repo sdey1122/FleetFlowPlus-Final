@@ -96,7 +96,9 @@ http.interceptors.response.use(
       cfg._fleetflowGeneration !== generation ||
       error.response?.status !== 401 ||
       !getToken() ||
-      !/^(?:\/?notifications(?:\/|$)|\/?auth\/me$)/.test(cfg.url || "")
+      !/^(?:\/?notifications(?:\/|$)|\/?shipments(?:\/|$)|\/?auth\/me$)/.test(
+        cfg.url || "",
+      )
     )
       throw error;
     cfg._retried = true;

@@ -33,7 +33,9 @@
     "react-leaflet": "^5.0.0",
     "@fontsource-variable/manrope": "^5.2.0",
     "@fontsource-variable/dm-sans": "^5.2.0",
-    "@fontsource-variable/newsreader": "^5.2.0"
+    "@fontsource-variable/newsreader": "^5.2.0",
+    "@mui/x-data-grid": "^8.0.0",
+    "recharts": "^3.0.0"
   },
   "devDependencies": {
     "typescript": "6.0.3",

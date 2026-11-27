@@ -1,1 +1,7 @@
-export type NotificationKind = "welcome" | "account" | "security" | "contact";
+export type NotificationKind =
+  | "welcome"
+  | "account"
+  | "security"
+  | "contact"
+  | "order"
+  | "payment";

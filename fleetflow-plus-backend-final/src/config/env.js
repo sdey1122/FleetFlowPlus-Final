@@ -165,7 +165,8 @@ const validateEnv = () => {
     ...(env.ampEmailEnabled ? ["EMAIL_USER"] : []),
     ...(env.emailDeliveryMode === "remote" ? ["EMAIL_SERVICE_URL"] : []),
     ...(env.emailDeliveryMode === "remote" || env.emailRelayEnabled
-      ? ["EMAIL_SERVICE_SECRET"] : []),
+      ? ["EMAIL_SERVICE_SECRET"]
+      : []),
 
     // Security secrets
     ...secretKeys,
@@ -196,15 +197,29 @@ const validateEnv = () => {
 
   if (env.emailDeliveryMode === "remote" || env.emailRelayEnabled) {
     const secret = process.env.EMAIL_SERVICE_SECRET;
-    if (Buffer.byteLength(secret) < 32 || secretKeys.some((key) => process.env[key] === secret)) {
-      throw new Error("Use a separate EMAIL_SERVICE_SECRET of at least 32 bytes");
+    if (
+      Buffer.byteLength(secret) < 32 ||
+      secretKeys.some((key) => process.env[key] === secret)
+    ) {
+      throw new Error(
+        "Use a separate EMAIL_SERVICE_SECRET of at least 32 bytes",
+      );
     }
   }
   if (env.emailDeliveryMode === "remote") {
     const relay = readURL("EMAIL_SERVICE_URL");
-    if (relay.protocol !== "https:" || relay.username || relay.password ||
-        relay.pathname !== "/" || relay.search || relay.hash || relay.origin === env.backend) {
-      throw new Error("EMAIL_SERVICE_URL must be the separate HTTPS Vercel backend origin");
+    if (
+      relay.protocol !== "https:" ||
+      relay.username ||
+      relay.password ||
+      relay.pathname !== "/" ||
+      relay.search ||
+      relay.hash ||
+      relay.origin === env.backend
+    ) {
+      throw new Error(
+        "EMAIL_SERVICE_URL must be the separate HTTPS Vercel backend origin",
+      );
     }
   }
 

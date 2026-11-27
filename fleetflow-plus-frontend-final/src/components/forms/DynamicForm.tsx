@@ -75,6 +75,7 @@ export default function DynamicForm({
           render={({ field, fieldState }) =>
             f.kind === "phone" ? (
               <PhoneInput
+                label={f.label}
                 value={field.value || ""}
                 onChange={field.onChange}
                 error={!!fieldState.error}
@@ -103,7 +104,7 @@ export default function DynamicForm({
                       : "password"
                     : f.kind === "email"
                       ? "email"
-                      : "text"
+                      : f.kind === "number" ? "number" : "text"
                 }
                 error={!!fieldState.error}
                 helperText={fieldState.error?.message}

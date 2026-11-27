@@ -8,7 +8,8 @@ const sendViaRelay = async (purpose, user, otp, reverifyToken) => {
     ...(purpose === "verify" ? { reverifyToken } : {}),
   });
   const endpoint = new URL(RELAY_PATH, process.env.EMAIL_SERVICE_URL);
-  if (endpoint.protocol !== "https:") throw new Error("Mail relay requires HTTPS");
+  if (endpoint.protocol !== "https:")
+    throw new Error("Mail relay requires HTTPS");
 
   let response;
   try {
@@ -20,7 +21,8 @@ const sendViaRelay = async (purpose, user, otp, reverifyToken) => {
       signal: AbortSignal.timeout(45000),
     });
     const result = await response.json();
-    if (!response.ok || result.success !== true) throw new Error("Relay rejected delivery");
+    if (!response.ok || result.success !== true)
+      throw new Error("Relay rejected delivery");
   } catch {
     // No automatic retry: a timeout can occur after SMTP accepted the message.
     const error = new Error("Remote OTP email delivery failed");

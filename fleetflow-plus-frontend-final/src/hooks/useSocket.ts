@@ -12,9 +12,7 @@ export const useSocket = () => {
     if (!token || !userId) return;
     const socket = io(
       import.meta.env.VITE_SOCKET_URL ||
-        (import.meta.env.DEV
-          ? "http://localhost:6050"
-          : "https://fleetflowplus-final.onrender.com"),
+        "https://fleetflowplus-final.onrender.com",
       {
         path: import.meta.env.VITE_SOCKET_PATH || "/socket.io",
         auth: { token },
@@ -25,15 +23,14 @@ export const useSocket = () => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const refresh = () => {
       if (timer) clearTimeout(timer);
-      timer = setTimeout(
-        () =>
-          dispatch(
-            notificationApi.util.invalidateTags([
-              { type: "Notifications", id: userId },
-            ]),
-          ),
-        250,
-      );
+      timer = setTimeout(() => {
+        window.dispatchEvent(new Event("fleetflow:orders-changed"));
+        dispatch(
+          notificationApi.util.invalidateTags([
+            { type: "Notifications", id: userId },
+          ]),
+        );
+      }, 250);
     };
     socket.on("connect", refresh);
     socket.on("notifications:changed", refresh);

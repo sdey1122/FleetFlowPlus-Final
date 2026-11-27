@@ -138,6 +138,7 @@ const route = (summary, fields, options = {}) => ({
 
 // API endpoints
 const paths = {
+  ...require("./customer.swagger"),
   "/health": {
     get: {
       tags: ["Server"],
@@ -277,6 +278,13 @@ const options = {
     ],
 
     tags: [
+      {
+        name: "Customer shipments",
+        description:
+          "Customer-only orders, pricing, payments, receipts and profile",
+      },
+      { name: "Notifications", description: "Private account notifications" },
+      { name: "Contact", description: "Contact enquiries" },
       {
         name: "Server",
         description: "Server and database health",

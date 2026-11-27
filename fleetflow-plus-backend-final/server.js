@@ -8,12 +8,17 @@ const startServer = async () => {
   const User = require("./src/model/auth.model");
   await connectDB();
   await User.init();
+  await require("./src/model/notification.model").init();
+  await require("./src/model/order.model").init();
+  await require("./src/model/quote.model").init();
   await redis.ping();
   const server = app.listen(port, "0.0.0.0", () =>
     console.log(`FleetFlow Plus Server running on http://localhost:${port}`),
   );
+  const io = require("./src/config/socket").initSocket(server);
   const stop = () => {
-    server.close(async () => {
+    io.disconnectSockets(true);
+    io.close(async () => {
       await require("mongoose").disconnect();
       process.exit(0);
     });

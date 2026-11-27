@@ -17,7 +17,7 @@ import {
   ChevronDown,
   LayoutDashboard,
   LogOut,
-  ArrowUpRight,
+  History,
 } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import Logo from "../common/Logo";
@@ -203,6 +203,7 @@ export default function Navbar() {
                 <LayoutDashboard size={17} />
                 <Box sx={{ ml: 1.3 }}>{roleLabels[user.role]} Dashboard</Box>
               </MenuItem>
+              {user.role === "customer" && <MenuItem onClick={() => {setAccount(null); navigate("/customer/orders");}}><History size={17}/><Box sx={{ml:1.3}}>Order history</Box></MenuItem>}
               <MenuItem disabled={busy} onClick={logout}>
                 <LogOut size={17} />
                 <Box sx={{ ml: 1.3 }}>Logout</Box>

@@ -16,6 +16,8 @@ const verifyEmailTemplate = ({ name, otp }) =>
     otp,
 
     codeLabel: "EMAIL VERIFICATION CODE",
+    actionUrl: `${require("../../config/env").getEnv().frontend}/#verify-email`,
+    actionText: "Continue email verification",
 
     securityTitle: "A quick security reminder.",
 

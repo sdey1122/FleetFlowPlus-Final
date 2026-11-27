@@ -1,3 +1,4 @@
+const notification = require("./notification.service");
 const bcrypt = require("bcryptjs");
 const User = require("../model/auth.model");
 const { getEnv } = require("../config/env");
@@ -85,6 +86,8 @@ const register = async (data) => {
     password: hashedPassword,
   });
 
+  await notification.registered(user);
+
   // Generate reverification token
   const reverifyToken = reverify(user);
 
@@ -115,6 +118,7 @@ const verifyEmail = async ({ email, otp }) => {
   );
   if (!verified)
     throw apiError(409, "ALREADY_VERIFIED", "Email is already verified.");
+  await notification.verified(verified);
   return publicUser(verified);
 };
 const resendOTP = async ({ reverifyToken }) => {
@@ -156,7 +160,13 @@ const login = async ({ email, password }) => {
       "Verify your email before logging in.",
       { email: user.email, reverifyToken: reverify(user) },
     );
-  return { user: publicUser(user), ...(await createSession(user)) };
+  const session = await createSession(user);
+  await notification.security(
+    user,
+    "New sign-in",
+    "Your account was signed in successfully.",
+  );
+  return { user: publicUser(user), ...session };
 };
 const refresh = async (token) => {
   const claims = verifyToken("refresh", token);
@@ -189,6 +199,11 @@ const resetPassword = async ({ email, otp, password }) => {
   await User.updateOne(
     { _id: user.id },
     { $set: { password: hash }, $inc: { sessionVersion: 1 } },
+  );
+  await notification.security(
+    user,
+    "Password changed",
+    "Your password was reset successfully.",
   );
 };
 module.exports = {

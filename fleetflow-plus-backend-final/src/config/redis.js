@@ -14,7 +14,8 @@ const redis = {
   ping: () => client.ping(),
   get: (name) => client.get(key(name)),
   set: (name, value, mode, seconds) => {
-    if (mode !== undefined && mode !== "EX") throw new Error("Unsupported Redis SET mode");
+    if (mode !== undefined && mode !== "EX")
+      throw new Error("Unsupported Redis SET mode");
     return mode === "EX"
       ? client.set(key(name), value, { ex: Number(seconds) })
       : client.set(key(name), value);
@@ -25,11 +26,12 @@ const redis = {
   ttl: (name) => client.ttl(key(name)),
   expire: (name, seconds) => client.expire(key(name), seconds),
   exists: (...names) => client.exists(...names.map(key)),
-  eval: (script, numberOfKeys, ...params) => client.eval(
-    script,
-    params.slice(0, numberOfKeys).map(key),
-    params.slice(numberOfKeys).map(String),
-  ),
+  eval: (script, numberOfKeys, ...params) =>
+    client.eval(
+      script,
+      params.slice(0, numberOfKeys).map(key),
+      params.slice(numberOfKeys).map(String),
+    ),
 };
 
 module.exports = redis;

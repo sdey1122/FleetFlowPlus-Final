@@ -4,6 +4,14 @@ export const useGeolocation = () => {
   const [locating, setLocating] = useState(false);
   const locate = () =>
     new Promise<IPlace>((resolve, reject) => {
+      if (!window.isSecureContext) {
+        reject(
+          new Error(
+            "Current location requires HTTPS or localhost. Enter your pickup manually.",
+          ),
+        );
+        return;
+      }
       if (!navigator.geolocation) {
         reject(new Error("Geolocation is unavailable."));
         return;
@@ -13,7 +21,7 @@ export const useGeolocation = () => {
         (p) => {
           setLocating(false);
           resolve({
-            label: "Current location",
+            label: `Current location (${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)})`,
             lat: p.coords.latitude,
             lon: p.coords.longitude,
           });
@@ -24,11 +32,13 @@ export const useGeolocation = () => {
             new Error(
               e.code === 1
                 ? "Location permission denied. Enter your pickup manually."
-                : "Could not determine your location.",
+                : e.code === 3
+                  ? "Location request timed out. Enable location services or enter your pickup manually."
+                  : "Location unavailable. Enable device location services or enter your pickup manually.",
             ),
           );
         },
-        { timeout: 12000, maximumAge: 60000 },
+        { timeout: 25000, maximumAge: 60000, enableHighAccuracy: false },
       );
     });
   return { locating, locate };

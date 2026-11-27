@@ -17,11 +17,13 @@ const failure = (e: unknown): IApiError => {
   const status = e.response?.status;
   return {
     message:
-      typeof body?.message === "string"
-        ? body.message
-        : status
-          ? `Notification request failed (HTTP ${status}).`
-          : "Connection unavailable. Please try again.",
+      body?.code === "NOT_FOUND"
+        ? "Notification API route not found. Deploy the updated backend on Render (or check your local proxy target)."
+        : typeof body?.message === "string"
+          ? body.message
+          : status
+            ? `Notification request failed (HTTP ${status}).`
+            : "Connection unavailable. Please try again.",
     code:
       typeof body?.code === "string"
         ? body.code
